@@ -184,8 +184,16 @@ defmodule Supabase.Auth.UserHandler do
            |> Request.with_method(:post)
            |> Request.with_body(body)
            |> Fetcher.request() do
-      IO.puts(resp)
-      Session.parse(resp.body)
+      case resp.body do
+        %{"access_token" => _} ->
+          Session.parse(resp.body)
+
+        %{"user" => _} ->
+          User.parse(resp.body)
+
+        _ ->
+          {:error, :unexpected_signup_response}
+      end
     end
   end
 
