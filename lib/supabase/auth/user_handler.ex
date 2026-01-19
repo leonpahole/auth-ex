@@ -184,6 +184,8 @@ defmodule Supabase.Auth.UserHandler do
            |> Request.with_method(:post)
            |> Request.with_body(body)
            |> Fetcher.request() do
+      IO.inspect(resp.body, label: "Signup response body")
+
       case resp.body do
         %{"access_token" => _} ->
           Session.parse(resp.body)
