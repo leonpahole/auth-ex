@@ -186,14 +186,16 @@ defmodule Supabase.Auth.UserHandler do
            |> Fetcher.request() do
       IO.inspect(resp.body, label: "Signup response body")
 
-      case resp.body do
-        %{"access_token" => _} ->
-          Session.parse(resp.body)
+      body = resp.body
 
-        %{"user" => _} ->
-          User.parse(resp.body)
+      cond do
+        Map.has_key?(body, "access_token") ->
+          Session.parse(body)
 
-        _ ->
+        Map.has_key?(body, "user_metadata") ->
+          User.parse(body)
+
+        true ->
           {:error, :unexpected_signup_response}
       end
     end
