@@ -272,7 +272,7 @@ defmodule Supabase.Auth.UserHandler do
         client
         |> Auth.Request.base(@single_user_uri)
         |> Request.with_headers(%{"authorization" => "Bearer #{access_token}"})
-        |> Request.with_method(:post)
+        |> Request.with_method(:put)
         |> Request.with_body(body)
         |> Request.with_query(%{"redirect_to" => params[:email_redirect_to]})
 
@@ -292,6 +292,10 @@ defmodule Supabase.Auth.UserHandler do
       end
     end
 
+    def update_user(%Client{} = client, %Session{} = session, %{} = params) do
+      call_update_user(client, session.access_token, params)
+    end
+
     def update_user(%Client{} = client, conn, %{} = params) do
       access_token =
         cond do
@@ -302,18 +306,10 @@ defmodule Supabase.Auth.UserHandler do
             conn.assigns.user_token
         end
 
-      builder =
-        client
-        |> Auth.Request.base(@single_user_uri)
-        |> Request.with_headers(%{"authorization" => "Bearer #{access_token}"})
-        |> Request.with_method(:post)
-        |> Request.with_body(params)
-        |> Request.with_query(%{"redirect_to" => params[:email_redirect_to]})
-
       session = %{"user_token" => access_token}
       auth_module = Auth.get_auth_module!()
 
-      with {:ok, _} <- Fetcher.request(builder) do
+      with {:ok, _} <- call_update_user(client, access_token, params) do
         cond do
           Code.ensure_loaded?(Plug) and is_struct(conn, Plug.Conn) ->
             {:ok, auth_module.fetch_current_user(conn, nil)}
@@ -322,6 +318,18 @@ defmodule Supabase.Auth.UserHandler do
             {:ok, auth_module.mount_current_user(session, conn)}
         end
       end
+    end
+
+    def call_update_user(%Client{} = client, access_token, %{} = params) do
+      builder =
+        client
+        |> Auth.Request.base(@single_user_uri)
+        |> Request.with_headers(%{"authorization" => "Bearer #{access_token}"})
+        |> Request.with_method(:put)
+        |> Request.with_body(params)
+        |> Request.with_query(%{"redirect_to" => params[:email_redirect_to]})
+
+      Fetcher.request(builder)
     end
   end
 

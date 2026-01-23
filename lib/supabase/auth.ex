@@ -500,12 +500,20 @@ defmodule Supabase.Auth do
         {:ok, conn}
     """
     @impl true
-    def update_user(%Client{} = client, conn, attrs) do
+    def update_user(%Client{} = client, %Plug.Conn{} = conn, attrs) do
       with {:ok, params} <- UserParams.parse(attrs) do
         if conn.assigns.current_user do
           UserHandler.update_user(client, conn, params)
         else
           {:error, :no_user_logged_in}
+        end
+      end
+    end
+
+    def update_user(%Client{} = client, %Session{} = session, attrs) do
+      with {:ok, params} <- UserParams.parse(attrs) do
+        with {:ok, response} <- UserHandler.update_user(client, session, params) do
+          User.parse(response.body)
         end
       end
     end
